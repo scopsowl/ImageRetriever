@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace ImageRetriever
 {
@@ -9,28 +10,45 @@ namespace ImageRetriever
 
         private HTMLScanner()
         {
+            position = 0;
+            buffer = "";
         }
 
         public HTMLScanner(string input_string)
         {
-            buffer = input_string;
             position = 0;
+            buffer = input_string;
+            if (buffer == null)
+            {
+                buffer = "";
+            }
         }
 
-        public bool FindTag(string tag_name, ref int start_pos, ref int length)
+        public bool FindTag(string tag_name, ref int start_pos, out int length, out Dictionary<string, string> attributes)
         {
             bool found = false;
+            int save = 0;
+
+            Dictionary<string, string> temp_attrs = null;
+
+            length = 0;
+
+            if (start_pos < 0 ||
+                start_pos >= buffer.Length)
+            {
+                start_pos = 0;
+            }
 
             position = start_pos;
-
             do
             {
+                save = position;
                 if (skipWhitespaceCommentsEtc())
                 {
                     if (matchesString(tag_name))
                     {
                         start_pos = position;
-                        skipThisElement(tag_name);
+                        extractThisElement(tag_name, out temp_attrs);
                         length = position - start_pos;
 
                         found = true;
@@ -41,7 +59,9 @@ namespace ImageRetriever
                     }
                 }
             }
-            while (position < buffer.Length && !found);
+            while (save < position && position < buffer.Length && !found);
+
+            attributes = temp_attrs;
 
             return found;
         }
@@ -66,10 +86,26 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        private bool extractThisElement(string tag_name, out Dictionary<string, string> attributes)
+        {
+            attributes = new Dictionary<string, string>();
+
+            if (matchesString(tag_name))
+            {
+                // skip the opening '<'
+                ++position;
+                skipTagName();
+                extractAttributes(ref attributes);
+                skipCloseTag();
+            }
+
+            return position < buffer.Length;
+        }
+
         private bool skipToNextElement()
         {
             skipWhitespace();
-
+            
             if (matchesString("</"))
             {
                 position += 2;
@@ -89,6 +125,14 @@ namespace ImageRetriever
             {
                 skipCDATA();
             }
+            else if (matchesString("<script"))
+            {
+                skipScript();
+            }
+            else if (matchesString("<style"))
+            {
+                skipStyle();
+            }
             else if (matchesString("<!--"))
             {
                 skipComment();
@@ -99,6 +143,7 @@ namespace ImageRetriever
             }
             else if (matchesString("<"))
             {
+                ++position;
                 skipTagName();
                 skipAttributes();
                 skipCloseTag();
@@ -113,8 +158,10 @@ namespace ImageRetriever
 
         private bool skipData()
         {
+            int save;
             do
             {
+                save = position;
                 skipWhitespaceCommentsEtc();
                 if (buffer[position] != '<')
                 {
@@ -128,19 +175,35 @@ namespace ImageRetriever
                     }
                 }
             }
-            while (position < buffer.Length && buffer[position] != '<');
+            while (save < position && position < buffer.Length && buffer[position] != '<');
 
             return position < buffer.Length;
         }
 
         private bool skipAttributes()
         {
+            int save;
             do
             {
+                save = position;
                 skipWhitespace();
                 skipAttribute();
             }
-            while (!matchesString("/>") && !matchesString(">"));
+            while (save < position && !matchesString("/>") && !matchesString(">"));
+
+            return position < buffer.Length;
+        }
+
+        private bool extractAttributes(ref Dictionary<string, string> attributes)
+        {
+            int save;
+            do
+            {
+                save = position;
+                skipWhitespace();
+                extractAttribute(ref attributes);
+            }
+            while (save < position && !matchesString("/>") && !matchesString(">"));
 
             return position < buffer.Length;
         }
@@ -152,8 +215,8 @@ namespace ImageRetriever
             if (peekC(0) == '=')
             {
                 position++;
-                skipWhitespace();
-                if (peekC(0) == '"')
+                if (skipWhitespace() &&
+                    peekC(0) == '"')
                 {
                     skipQuotedString('"');
                 }
@@ -171,6 +234,45 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+
+        private bool extractAttribute(ref Dictionary<string, string> attributes)
+        {
+            int start = position;
+            skipAttributeName();
+            string name = buffer.Substring(start, position - start);
+            string value = null;
+
+            skipWhitespace();
+            if (peekC(0) == '=')
+            {
+                position++;
+                skipWhitespace();
+                if (peekC(0) == '"')
+                {
+                    start = position + 1;
+                    skipQuotedString('"');
+                    value = buffer.Substring(start, position - start - 1); ;
+                }
+                else if (peekC(0) == '\'')
+                {
+                    start = position + 1;
+                    skipQuotedString('\'');
+                    value = buffer.Substring(start, position - start - 1); ;
+                }
+                else
+                {
+                    start = position;
+                    skipUnquotedString();
+                    value = buffer.Substring(start, position - start); ;
+                }
+                skipWhitespace();
+            }
+
+            attributes.Add(name, value);
+
+            return position < buffer.Length;
+        }
+
         private bool skipWhitespaceCommentsEtc()
         {
             int save;
@@ -184,7 +286,7 @@ namespace ImageRetriever
                    skipScript()     &&
                    skipCDATA()      &&
                    skipComment()    &&
-                   save != position);
+                   save < position);
 
             return position < buffer.Length;
         }
@@ -223,7 +325,10 @@ namespace ImageRetriever
         // Are we positioned at the beginning of this string in the buffer?
         private bool matchesString(string target)
         {
-            return position < buffer.Length && (buffer.IndexOf(target, position, 1) == 0);
+            return target != null &&
+                   (position < buffer.Length) &&
+                   (target.Length <= (buffer.Length - position)) &&
+                   buffer.Substring(position, target.Length).Equals(target, StringComparison.OrdinalIgnoreCase);
         }
 
         private bool skipCloseTag()
@@ -231,9 +336,13 @@ namespace ImageRetriever
             if (skipWhitespace())
             {
                 if (peekC(0) == '/' && peekC(1) == '>')
+                {
                     position += 2;
+                }
                 else if (peekC(0) == '>')
+                {
                     position++;
+                }
             }
 
             return position < buffer.Length;
@@ -241,8 +350,7 @@ namespace ImageRetriever
 
         private bool skipTagName()
         {
-            while (position < buffer.Length &&
-                   char.IsLetterOrDigit(buffer[position]))
+            while (position < buffer.Length && char.IsLetterOrDigit(buffer[position]))
             {
                 position++;
             }
@@ -267,6 +375,11 @@ namespace ImageRetriever
 
         private bool skipQuotedString(char quote)
         {
+            // remove leading quote
+            if (buffer[position] == quote)
+                ++position;
+
+            // remove everything up to the trailing quote
             while (position < buffer.Length && buffer[position] != quote)
             {
                 ++position;
@@ -278,6 +391,10 @@ namespace ImageRetriever
                     ++position;
                 }
             }
+
+            // remove trailing quote
+            if (buffer[position] == quote)
+                ++position;
 
             return position < buffer.Length;
         }
@@ -343,6 +460,7 @@ namespace ImageRetriever
                     if (matchesString(suffix))
                     {
                         position += suffix.Length;
+                        break;
                     }
                     else
                     {

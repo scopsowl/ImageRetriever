@@ -13,16 +13,14 @@ namespace ImageRetriever
             {
                 WebPage page = new WebPage(args[1]);
 
-                bool result = page.Fetch();
-
                 if (page.BufferOfText != null)
                 {
                     // Got the page, now look for images
                     foreach (string image_link in page)
                     {
-                        WebImage image = new WebImage(args[1], image_link);
+                        WebImage image = new WebImage(page.HostAddress, image_link);
 
-                        image.Save(args[0]);
+                        image.SaveLocal(args[0]);
                     }
 
                     Console.WriteLine(page.BufferOfText);  // no abstraction in main for unit testing I/O

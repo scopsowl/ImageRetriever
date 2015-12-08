@@ -19,7 +19,7 @@ namespace ImageRetriever.Tests
 
             WebImage image = new WebImage(test_base_url, test_tag);
 
-            Assert.IsTrue(test_tag.Equals(image.image_tag));
+            Assert.IsTrue(test_tag.Equals(image.ImageTag));
         }
 
         [TestMethod()]
@@ -30,7 +30,7 @@ namespace ImageRetriever.Tests
 
             WebImage image = new WebImage(test_base_url, test_tag);
 
-            image.Save("c:\\Temp");
+            image.SaveLocal("c:\\Temp");
         }
     }
 }

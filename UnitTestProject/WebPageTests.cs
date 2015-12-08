@@ -18,18 +18,13 @@ namespace ImageRetriever.Tests
         [TestMethod()]
         public void WebPageTest()
         {
-            WebPage retriever = new WebPage("http://www.google.com/");
-        }
-
-        [TestMethod()]
-        public void FetchTest()
-        {
-            WebPage retriever = new WebPage("http://www.google.com/");
+            string test_google = "http://www.google.com/";
+            WebPage retriever = new WebPage(test_google);
 
             retriever.OutputMethod = OutputMock;
-
             output_text = null;
-            Assert.IsTrue(retriever.Fetch());
+
+            Assert.IsTrue(retriever.HostAddress.Equals(test_google, StringComparison.CurrentCultureIgnoreCase));
             Assert.IsNotNull(retriever.BufferOfText);
             Assert.IsTrue(retriever.BufferOfText.IndexOf("<!doctype html>", StringComparison.CurrentCultureIgnoreCase) == 0);
         }
