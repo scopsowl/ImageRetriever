@@ -1,10 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using ImageRetriever;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ImageRetriever.Tests
 {
@@ -22,7 +17,6 @@ namespace ImageRetriever.Tests
             WebPage retriever = new WebPage(test_google);
 
             retriever.OutputMethod = OutputMock;
-            output_text = null;
 
             Assert.IsTrue(retriever.HostAddress.Equals(test_google, StringComparison.CurrentCultureIgnoreCase));
             Assert.IsNotNull(retriever.BufferOfText);

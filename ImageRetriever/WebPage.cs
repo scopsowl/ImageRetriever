@@ -117,13 +117,7 @@ namespace ImageRetriever
                         try
                         {
                             html_buffer = readStream.ReadToEnd();
-
-                            if (html_buffer != null)
-                            {
-                                OutputMethod(html_buffer);
-                            }
-
-                            is_success = true;
+                            is_success = html_buffer != null;
                         }
                         finally
                         {

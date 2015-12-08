@@ -18,7 +18,6 @@ namespace ImageRetriever.Tests
             string test_tag      = "<img alt=\"foo\" src=\"/images/nav_logo242.png\" />";
 
             WebImage image = new WebImage(test_base_url, test_tag);
-
             Assert.IsTrue(test_tag.Equals(image.ImageTag));
         }
 
@@ -30,7 +29,8 @@ namespace ImageRetriever.Tests
 
             WebImage image = new WebImage(test_base_url, test_tag);
 
-            image.SaveLocal("c:\\Temp");
+            string filename = image.SaveLocal("c:\\Temp");
+            Assert.IsNotNull(filename);
         }
     }
 }

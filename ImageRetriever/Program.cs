@@ -1,7 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Net;
-using System.Text;
 
 namespace ImageRetriever
 {
@@ -15,15 +12,22 @@ namespace ImageRetriever
 
                 if (page.BufferOfText != null)
                 {
-                    // Got the page, now look for images
+                    // Got the page, now grab each image represented by an <img ... > tag
+                    int filecount = 0;
                     foreach (string image_link in page)
                     {
                         WebImage image = new WebImage(page.HostAddress, image_link);
 
-                        image.SaveLocal(args[0]);
+                        // Here is where we actually retrieve the image data and write it to the filesystem
+                        string filename = image.SaveLocal(args[0]);
+                        if (filename != null)
+                        {
+                            Console.WriteLine("Downloaded {0}.", filename);
+                            ++filecount;
+                        }
                     }
 
-                    Console.WriteLine(page.BufferOfText);  // no abstraction in main for unit testing I/O
+                    Console.WriteLine("{0} files downloaded from {1}.", filecount, page.HostAddress);
                 }
             }
         }

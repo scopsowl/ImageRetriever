@@ -79,20 +79,17 @@ namespace ImageRetriever
         }
 
         // Create a local file in the folder passed in that contains the remote image data
-        public bool SaveLocal(string path)
+        public string SaveLocal(string path)
         {
-            bool retval = false;
+            string filename = null;
 
             if (url != null && url.IsWellFormedOriginalString())
             {
                 try
                 {
                     // prepare to make a request using the string's URI scheme
-                    WebRequest request = WebRequest.Create(url); 
-                    
                     HttpWebResponse response = null;
-
-                    retval = true;
+                    WebRequest      request  = WebRequest.Create(url); 
                     try
                     {
                         // ask nicely
@@ -111,7 +108,7 @@ namespace ImageRetriever
                                     using (var image = Image.FromStream(receiveStream))
                                     {
                                         // make a unique filename
-                                        string filename = ConstructLocalFileName(path, response.ContentType);
+                                        filename = ConstructLocalFileName(path, response.ContentType);
 
                                         // create any subdirectories along the path
                                         string directory = Path.GetDirectoryName(filename);
@@ -127,6 +124,7 @@ namespace ImageRetriever
                                 catch (ArgumentException e)
                                 {
                                     OutputMethod("Some exception occurred: " + e.Message);
+                                    filename = null;
                                 }
                                 finally
                                 {
@@ -146,10 +144,11 @@ namespace ImageRetriever
                 catch (Exception e)
                 {
                     OutputMethod("Some exception occurred: " + e.Message);
+                    filename = null;
                 }
             }
 
-            return retval;
+            return filename;
         }
 
         private string ConstructLocalFileName(string path, string content_type)

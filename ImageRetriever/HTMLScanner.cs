@@ -5,8 +5,8 @@ namespace ImageRetriever
 {
     public class HTMLScanner
     {
-        public string buffer;
-        public int position;
+        // This is the host that can be used as the referer when we retrieve images later on.  It is not externally settable
+        public string HTMLBuffer { get { return buffer; } }
 
         private HTMLScanner()
         {
@@ -24,6 +24,8 @@ namespace ImageRetriever
             }
         }
 
+        // given a tag (such as "<img") and a starting position, return a bool indicating if we found one, and if we did,
+        // a dictionary containing all the attribute name/value pairs specified in that html element. 
         public bool FindTag(string tag_name, ref int start_pos, out int length, out Dictionary<string, string> attributes)
         {
             bool found = false;
@@ -72,6 +74,7 @@ namespace ImageRetriever
             position = 0;
         }
 
+        // skip over this html element.
         private bool skipThisElement(string tag_name)
         {
             if (matchesString(tag_name))
@@ -86,6 +89,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // Extract a dictionary full of attribute names and values from the current html element (only tested with <img tags)
         private bool extractThisElement(string tag_name, out Dictionary<string, string> attributes)
         {
             attributes = new Dictionary<string, string>();
@@ -102,6 +106,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // wherever we are currently, advance until we are at the beginning of an element (or at the end of the buffer).
         private bool skipToNextElement()
         {
             skipWhitespace();
@@ -156,6 +161,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // Skip along in the buffer until we find the beginning of an element.
         private bool skipData()
         {
             int save;
@@ -180,6 +186,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // skip over the list of 0 or more attributes that follow an element name.
         private bool skipAttributes()
         {
             int save;
@@ -194,6 +201,8 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // After positioning past the name of an element, loop over the attributes and add
+        // each of them to the dictionary
         private bool extractAttributes(ref Dictionary<string, string> attributes)
         {
             int save;
@@ -208,6 +217,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // Skip over the current attribute (either name or name=value) in the buffer.
         private bool skipAttribute()
         {
             skipAttributeName();
@@ -234,7 +244,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
-
+        // Add a single attribute (name or name=value) to our dictionary, and skip past it in the buffer.
         private bool extractAttribute(ref Dictionary<string, string> attributes)
         {
             int start = position;
@@ -273,6 +283,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // For brevity, skip all the cruft we never want to look inside of.
         private bool skipWhitespaceCommentsEtc()
         {
             int save;
@@ -314,6 +325,7 @@ namespace ImageRetriever
             return c;
         }
 
+        // Move the cursor position forwards by one if we are not already at the end of the buffer
         private bool skipCharacter(char c)
         {
             if (position < buffer.Length && buffer[position] == c)
@@ -331,6 +343,7 @@ namespace ImageRetriever
                    buffer.Substring(position, target.Length).Equals(target, StringComparison.OrdinalIgnoreCase);
         }
 
+        // skip the closing tag for an element.
         private bool skipCloseTag()
         {
             if (skipWhitespace())
@@ -348,6 +361,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // skip the name of a tag, which must consist of only letters and numbers
         private bool skipTagName()
         {
             while (position < buffer.Length && char.IsLetterOrDigit(buffer[position]))
@@ -358,6 +372,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // skip a contiguous run of whitespace characters
         private bool skipWhitespace()
         {
             while (position < buffer.Length &&
@@ -373,6 +388,8 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // Skip over a quoted string, given the quote character to use.  Note that the quote
+        // character can, itself, be escaped or 'quoted' using ampersand if it needs to be embedded.
         private bool skipQuotedString(char quote)
         {
             // remove leading quote
@@ -399,6 +416,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // An unquoted attribute value can only be terminated by a specific set of characters...
         private bool skipUnquotedString()
         {
             char c;
@@ -423,6 +441,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // An attribute name can be made up of a specific set of characters.  Skip a contiguous sequence of them.
         private bool skipAttributeName()
         {
             char c;
@@ -449,6 +468,7 @@ namespace ImageRetriever
             return position < buffer.Length;
         }
 
+        // skip from the beginning of an element to the end, based on prefix and suffix strings
         private bool skipElement(string prefix, string suffix)
         {
             if (skipWhitespace() && matchesString(prefix))
@@ -500,5 +520,13 @@ namespace ImageRetriever
         {
             return skipElement("<!DOCTYPE", ">");
         }
+
+        //---------------- Private data
+
+        // contains the html text we are scanning
+        private string buffer;
+
+        // our current position within the buffer
+        private int position;
     }
 }
